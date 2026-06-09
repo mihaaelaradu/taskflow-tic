@@ -1,63 +1,59 @@
 <template>
   <div class="app">
-    <header class="header">
-      <h1 class="logo">TaskFlow</h1>
+    <header class="navbar">
+      <h1>TaskFlow</h1>
 
-      <nav class="nav">
+      <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/login">Login</RouterLink>
         <RouterLink to="/tasks">Tasks</RouterLink>
       </nav>
     </header>
 
-    <main class="main-content">
+    <main class="content">
       <RouterView />
     </main>
   </div>
 </template>
 
-<script setup>
-import { RouterLink, RouterView } from 'vue-router'
-</script>
-
 <style scoped>
 .app {
   min-height: 100vh;
-  background-color: #f9fafb;
-  color: #111827;
+  background-color: #f8fafc;
   font-family: Arial, sans-serif;
 }
 
-.header {
+.navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 32px;
-  background-color: #1f2937;
+  padding: 20px 40px;
+  background-color: #1e293b;
   color: white;
 }
 
-.logo {
-  font-size: 24px;
+.navbar h1 {
   margin: 0;
+  font-size: 28px;
 }
 
-.nav {
+nav {
   display: flex;
-  gap: 16px;
+  gap: 20px;
 }
 
-.nav a {
+nav a {
   color: white;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
 }
 
-.nav a.router-link-active {
-  text-decoration: underline;
+nav a.router-link-exact-active {
+  border-bottom: 2px solid #38bdf8;
+  padding-bottom: 4px;
 }
 
-.main-content {
-  padding: 32px;
+.content {
+  padding: 40px 20px;
 }
 </style>
