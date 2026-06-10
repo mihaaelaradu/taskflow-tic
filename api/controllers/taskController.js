@@ -1,5 +1,5 @@
 const db = require('../config/firebase');
-const { collection, getDocs } = require('firebase/firestore');
+const { collection, getDocs, addDoc } = require('firebase/firestore');
 
 const getAllTasks = async (req, res) => {
   try {
@@ -18,6 +18,44 @@ const getAllTasks = async (req, res) => {
   }
 };
 
+const createTask = async (req, res) => {
+  try {
+    const { title, description, status, priority, category } = req.body;
+
+    if (!title || !description || !status || !priority) {
+      return res.status(400).json({
+        message: 'Title, description, status and priority are required',
+      });
+    }
+
+    const newTask = {
+      title,
+      description,
+      status,
+      priority,
+      category: category || {
+        id: 'general',
+        name: 'General',
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    };
+
+    const docRef = await addDoc(collection(db, 'tasks'), newTask);
+
+    res.status(201).json({
+      id: docRef.id,
+      ...newTask,
+    });
+  } catch (error) {
+    console.error('Error creating task:', error);
+    res.status(500).json({ message: 'Failed to create task' });
+  }
+};
+
 module.exports = {
   getAllTasks,
+  createTask,
 };
