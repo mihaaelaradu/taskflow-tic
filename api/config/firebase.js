@@ -1,16 +1,16 @@
-const { initializeApp } = require('firebase/app');
-const { getFirestore } = require('firebase/firestore');
+const admin = require('firebase-admin');
+require('dotenv').config();
 
-const firebaseConfig = {
-  apiKey: 'AIzaSyBAIQQJh6uFNr6c6RF5DHcDP2WlaAbu6l4',
-  authDomain: 'taskflow-tic-69efd.firebaseapp.com',
-  projectId: 'taskflow-tic-69efd',
-  storageBucket: 'taskflow-tic-69efd.firebasestorage.app',
-  messagingSenderId: '427562890111',
-  appId: '1:427562890111:web:bb6191ffe87db2b971e04a',
-};
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    }),
+  });
+}
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db = admin.firestore();
 
-module.exports = db;
+module.exports = { admin, db };
