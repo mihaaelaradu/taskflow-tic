@@ -1,3 +1,21 @@
+<script setup>
+import { computed } from 'vue';
+import { RouterLink, RouterView, useRouter } from 'vue-router';
+import { signOut } from 'firebase/auth';
+import { auth } from './firebase';
+import { useAuthStore } from './stores/auth';
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+const isAuthenticated = computed(() => !!authStore.user);
+
+const handleLogout = async () => {
+  await signOut(auth);
+  router.push('/login');
+};
+</script>
+
 <template>
   <div class="app">
     <header class="navbar">
@@ -5,8 +23,16 @@
 
       <nav>
         <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/login">Login</RouterLink>
+
+        <RouterLink v-if="!isAuthenticated" to="/login">
+          Login
+        </RouterLink>
+
         <RouterLink to="/tasks">Tasks</RouterLink>
+
+        <button v-if="isAuthenticated" class="logout-btn" @click="handleLogout">
+          Logout
+        </button>
       </nav>
     </header>
 
@@ -39,6 +65,7 @@
 
 nav {
   display: flex;
+  align-items: center;
   gap: 20px;
 }
 
@@ -51,6 +78,20 @@ nav a {
 nav a.router-link-exact-active {
   border-bottom: 2px solid #38bdf8;
   padding-bottom: 4px;
+}
+
+.logout-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+}
+
+.logout-btn:hover {
+  color: #38bdf8;
 }
 
 .content {
