@@ -1,5 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 
 const tasks = ref([]);
 const loading = ref(true);
@@ -39,6 +42,13 @@ const statusClass = (status) => {
   if (status === 'done') return 'badge-done';
   return '';
 };
+
+const router = useRouter();
+
+const handleLogout = async () => {
+  await signOut(auth);
+  router.push('/login');
+};
 </script>
 
 <template>
@@ -51,6 +61,10 @@ const statusClass = (status) => {
 
       <button class="refresh-btn" @click="fetchTasks">
         Refresh
+      </button>
+
+      <button class="logout-btn" @click="handleLogout">
+        Logout
       </button>
     </div>
 
@@ -179,6 +193,43 @@ p {
   }
 
   .refresh-btn {
+    width: 100%;
+  }
+}
+
+.tasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.tasks-header p {
+  margin-bottom: 0;
+}
+
+.logout-btn {
+  padding: 10px 16px;
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.logout-btn:hover {
+  background-color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+  .tasks-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .logout-btn {
     width: 100%;
   }
 }
