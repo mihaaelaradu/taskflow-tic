@@ -1,10 +1,8 @@
-const db = require('../config/firebase');
-const { collection, getDocs, addDoc } = require('firebase/firestore');
+const { db } = require('../config/firebase');
 
-const getAllTasks = async (req, res) => {
+const getTasks = async (req, res) => {
   try {
-    const tasksCollection = collection(db, 'tasks');
-    const snapshot = await getDocs(tasksCollection);
+    const snapshot = await db.collection('tasks').get();
 
     const tasks = snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -20,7 +18,7 @@ const getAllTasks = async (req, res) => {
 
 const createTask = async (req, res) => {
   try {
-    const { title, description, status, priority, category } = req.body;
+    const { title, description, status, priority } = req.body;
 
     if (!title || !description || !status || !priority) {
       return res.status(400).json({
@@ -33,17 +31,11 @@ const createTask = async (req, res) => {
       description,
       status,
       priority,
-      category: category || {
-        id: 'general',
-        name: 'General',
-      },
-      metadata: {
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+      createdAt: new Date().toISOString(),
+      userId: req.user.uid,
     };
 
-    const docRef = await addDoc(collection(db, 'tasks'), newTask);
+    const docRef = await db.collection('tasks').add(newTask);
 
     res.status(201).json({
       id: docRef.id,
@@ -55,7 +47,28 @@ const createTask = async (req, res) => {
   }
 };
 
+const deleteTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const taskRef = db.collection('tasks').doc(id);
+    const taskDoc = await taskRef.get();
+
+    if (!taskDoc.exists) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    await taskRef.delete();
+
+    res.status(200).json({ message: 'Task deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    res.status(500).json({ message: 'Failed to delete task' });
+  }
+};
+
 module.exports = {
-  getAllTasks,
+  getTasks,
   createTask,
+  deleteTask,
 };
