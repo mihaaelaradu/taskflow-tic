@@ -20,12 +20,6 @@ const createTask = async (req, res) => {
   try {
     const { title, description, status, priority } = req.body;
 
-    if (!title || !description || !status || !priority) {
-      return res.status(400).json({
-        message: 'Title, description, status and priority are required',
-      });
-    }
-
     const newTask = {
       title,
       description,
@@ -51,12 +45,6 @@ const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, status, priority } = req.body;
-
-    if (!title || !description || !status || !priority) {
-      return res.status(400).json({
-        message: 'Title, description, status and priority are required',
-      });
-    }
 
     const taskRef = db.collection('tasks').doc(id);
     const taskDoc = await taskRef.get();
