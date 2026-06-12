@@ -12,6 +12,9 @@ const title = ref('');
 const description = ref('');
 const status = ref('todo');
 
+const isEditing = ref(false);
+const editingTaskId = ref(null);
+
 const fetchTasks = async () => {
   loading.value = true;
   error.value = '';
@@ -110,13 +113,84 @@ const deleteTask = async (taskId) => {
   }
 };
 
+const startEditTask = (task) => {
+  error.value = '';
+  successMessage.value = '';
+
+  isEditing.value = true;
+  editingTaskId.value = task.id;
+
+  title.value = task.title;
+  description.value = task.description;
+  status.value = task.status;
+  priority.value = task.priority;
+};
+
+const cancelEdit = () => {
+  isEditing.value = false;
+  editingTaskId.value = null;
+
+  title.value = '';
+  description.value = '';
+  status.value = 'todo';
+  priority.value = 'medium';
+
+  error.value = '';
+  successMessage.value = '';
+};
+
+const updateTask = async () => {
+  error.value = '';
+  successMessage.value = '';
+
+  try {
+    const user = auth.currentUser;
+
+    if (!user) {
+      throw new Error('Trebuie sa fii autentificat pentru a edita un task.');
+    }
+
+    const token = await user.getIdToken();
+
+    const response = await fetch(`http://localhost:5001/api/tasks/${editingTaskId.value}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: title.value,
+        description: description.value,
+        status: status.value,
+        priority: priority.value,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Task-ul nu a putut fi actualizat.');
+    }
+
+    successMessage.value = 'Task actualizat cu succes.';
+    cancelEdit();
+    await fetchTasks();
+  } catch (err) {
+    error.value = err.message;
+  }
+};
+
 const handleSubmit = async () => {
   if (!title.value.trim() || !description.value.trim()) {
     error.value = 'Titlul si descrierea sunt obligatorii.';
     return;
   }
 
-  await createTask();
+  if (isEditing.value) {
+    await updateTask();
+  } else {
+    await createTask();
+  }
 };
 
 onMounted(() => {
@@ -152,7 +226,7 @@ const statusClass = (status) => {
     </div>
 
     <form class="task-form" @submit.prevent="handleSubmit">
-      <h3>Adauga task nou</h3>
+      <h3>{{ isEditing ? 'Editeaza task' : 'Adauga task nou' }}</h3>
 
       <input
         v-model="title"
@@ -179,8 +253,18 @@ const statusClass = (status) => {
       </select>
 
       <button type="submit" class="add-btn">
-        Adauga task
+        {{ isEditing ? 'Salveaza modificarile' : 'Adauga task' }}
       </button>
+
+      <button
+        v-if="isEditing"
+        type="button"
+        class="cancel-btn"
+        @click="cancelEdit"
+      >
+        Anuleaza editarea
+      </button>
+
     </form>
 
     <p v-if="successMessage" class="success">{{ successMessage }}</p>
@@ -200,7 +284,15 @@ const statusClass = (status) => {
 
           <p class="priority">Prioritate: {{ task.priority }}</p>
 
+
           <div class="task-actions">
+            <button
+              class="edit-btn"
+              @click="startEditTask(task)"
+            >
+              Editeaza
+            </button>
+
             <button
               class="delete-btn"
               @click="deleteTask(task.id)"
@@ -208,6 +300,7 @@ const statusClass = (status) => {
               Sterge
             </button>
           </div>
+
         </div>
       </article>
     </div>
@@ -404,4 +497,34 @@ p {
 .delete-btn:hover {
   background-color: #b91c1c;
 }
+
+.edit-btn {
+  padding: 10px 14px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-right: 10px;
+}
+
+.edit-btn:hover {
+  background-color: #1d4ed8;
+}
+
+.cancel-btn {
+  padding: 12px 16px;
+  background-color: #e5e7eb;
+  color: #111827;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cancel-btn:hover {
+  background-color: #d1d5db;
+}
+
 </style>

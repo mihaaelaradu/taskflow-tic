@@ -47,6 +47,45 @@ const createTask = async (req, res) => {
   }
 };
 
+const updateTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, status, priority } = req.body;
+
+    if (!title || !description || !status || !priority) {
+      return res.status(400).json({
+        message: 'Title, description, status and priority are required',
+      });
+    }
+
+    const taskRef = db.collection('tasks').doc(id);
+    const taskDoc = await taskRef.get();
+
+    if (!taskDoc.exists) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const updatedTask = {
+      title,
+      description,
+      status,
+      priority,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await taskRef.update(updatedTask);
+
+    res.status(200).json({
+      id,
+      ...taskDoc.data(),
+      ...updatedTask,
+    });
+  } catch (error) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ message: 'Failed to update task' });
+  }
+};
+
 const deleteTask = async (req, res) => {
   try {
     const { id } = req.params;
@@ -70,5 +109,6 @@ const deleteTask = async (req, res) => {
 module.exports = {
   getTasks,
   createTask,
+  updateTask,
   deleteTask,
 };
