@@ -1,122 +1,25 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import { auth } from '../firebase';
+import { ref, onMounted, computed } from 'vue';
+import { useTasksStore } from '../stores/tasks';
 
-const tasks = ref([]);
-const loading = ref(true);
-const error = ref('');
-const successMessage = ref('');
-const priority = ref('medium');
+const tasksStore = useTasksStore();
+
+const tasks = computed(() => tasksStore.tasks);
+const loading = computed(() => tasksStore.loading);
+const error = computed(() => tasksStore.error);
+const successMessage = computed(() => tasksStore.successMessage);
 
 const title = ref('');
 const description = ref('');
 const status = ref('todo');
+const priority = ref('medium');
 
 const isEditing = ref(false);
 const editingTaskId = ref(null);
-
-const fetchTasks = async () => {
-  loading.value = true;
-  error.value = '';
-
-  try {
-    const response = await fetch('http://localhost:5001/api/tasks');
-
-    if (!response.ok) {
-      throw new Error('Nu s-au putut incarca task-urile');
-    }
-
-    const data = await response.json();
-    tasks.value = data;
-  } catch (err) {
-    error.value = err.message;
-  } finally {
-    loading.value = false;
-  }
-};
-
-const createTask = async () => {
-  error.value = '';
-  successMessage.value = '';
-
-  try {
-    const user = auth.currentUser;
-
-    if (!user) {
-      throw new Error('Trebuie sa fii autentificat pentru a adauga un task.');
-    }
-
-    const token = await user.getIdToken();
-
-    const response = await fetch('http://localhost:5001/api/tasks', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        title: title.value,
-        description: description.value,
-        status: status.value,
-        priority: priority.value,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Task-ul nu a putut fi adaugat.');
-    }
-
-    successMessage.value = 'Task adaugat cu succes.';
-    title.value = '';
-    description.value = '';
-    status.value = 'todo';
-    priority.value = 'medium';
-
-    await fetchTasks();
-  } catch (err) {
-    error.value = err.message;
-  }
-};
-
-const deleteTask = async (taskId) => {
-  error.value = '';
-  successMessage.value = '';
-
-  try {
-    const user = auth.currentUser;
-
-    if (!user) {
-      throw new Error('Trebuie sa fii autentificat pentru a sterge un task.');
-    }
-
-    const token = await user.getIdToken();
-
-    const response = await fetch(`http://localhost:5001/api/tasks/${taskId}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Task-ul nu a putut fi sters.');
-    }
-
-    successMessage.value = 'Task sters cu succes.';
-    await fetchTasks();
-  } catch (err) {
-    error.value = err.message;
-  }
-};
+const localError = ref('');
 
 const startEditTask = (task) => {
-  error.value = '';
-  successMessage.value = '';
-
+  localError.value = '';
   isEditing.value = true;
   editingTaskId.value = task.id;
 
@@ -126,75 +29,53 @@ const startEditTask = (task) => {
   priority.value = task.priority;
 };
 
-const cancelEdit = () => {
-  isEditing.value = false;
-  editingTaskId.value = null;
-
+const resetForm = () => {
   title.value = '';
   description.value = '';
   status.value = 'todo';
   priority.value = 'medium';
-
-  error.value = '';
-  successMessage.value = '';
+  isEditing.value = false;
+  editingTaskId.value = null;
 };
 
-const updateTask = async () => {
-  error.value = '';
-  successMessage.value = '';
-
-  try {
-    const user = auth.currentUser;
-
-    if (!user) {
-      throw new Error('Trebuie sa fii autentificat pentru a edita un task.');
-    }
-
-    const token = await user.getIdToken();
-
-    const response = await fetch(`http://localhost:5001/api/tasks/${editingTaskId.value}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        title: title.value,
-        description: description.value,
-        status: status.value,
-        priority: priority.value,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Task-ul nu a putut fi actualizat.');
-    }
-
-    successMessage.value = 'Task actualizat cu succes.';
-    cancelEdit();
-    await fetchTasks();
-  } catch (err) {
-    error.value = err.message;
-  }
+const cancelEdit = () => {
+  localError.value = '';
+  resetForm();
 };
 
 const handleSubmit = async () => {
+  localError.value = '';
+
   if (!title.value.trim() || !description.value.trim()) {
-    error.value = 'Titlul si descrierea sunt obligatorii.';
+    localError.value = 'Titlul si descrierea sunt obligatorii.';
     return;
   }
 
+  const payload = {
+    title: title.value,
+    description: description.value,
+    status: status.value,
+    priority: priority.value,
+  };
+
   if (isEditing.value) {
-    await updateTask();
+    await tasksStore.updateTask(editingTaskId.value, payload);
   } else {
-    await createTask();
+    await tasksStore.createTask(payload);
+  }
+
+  if (!tasksStore.error) {
+    resetForm();
   }
 };
 
+const handleDelete = async (taskId) => {
+  localError.value = '';
+  await tasksStore.deleteTask(taskId);
+};
+
 onMounted(() => {
-  fetchTasks();
+  tasksStore.fetchTasks();
 });
 
 const formatStatus = (status) => {
@@ -220,7 +101,7 @@ const statusClass = (status) => {
         <p>Mai jos este lista task-urilor tale curente.</p>
       </div>
 
-      <button class="refresh-btn" @click="fetchTasks">
+      <button class="refresh-btn" @click="tasksStore.fetchTasks">
         Refresh
       </button>
     </div>
@@ -267,6 +148,7 @@ const statusClass = (status) => {
 
     </form>
 
+    <p v-if="localError" class="error">{{ localError }}</p>
     <p v-if="successMessage" class="success">{{ successMessage }}</p>
     <p v-if="loading">Se incarca task-urile...</p>
     <p v-else-if="error" class="error">{{ error }}</p>
@@ -295,7 +177,7 @@ const statusClass = (status) => {
 
             <button
               class="delete-btn"
-              @click="deleteTask(task.id)"
+              @click="handleDelete(task.id)"
             >
               Sterge
             </button>
